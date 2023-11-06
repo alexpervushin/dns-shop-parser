@@ -1,7 +1,8 @@
-import aiohttp
 import asyncio
-from bs4 import BeautifulSoup
 import json
+
+import aiohttp
+from bs4 import BeautifulSoup
 
 
 async def get_product_details(params_list: list, cookies: str, headers: str) -> list:
@@ -10,10 +11,11 @@ async def get_product_details(params_list: list, cookies: str, headers: str) -> 
         product_details_list = await asyncio.gather(*fetch_tasks)
     return product_details_list
 
+
 async def fetch_product_data(session, params):
     async with session.post(
-        'https://www.dns-shop.ru/catalog/product/get-product-characteristics-actual/',
-        params=params,
+            'https://www.dns-shop.ru/catalog/product/get-product-characteristics-actual/',
+            params=params,
     ) as response:
         response_text = await response.text()
 

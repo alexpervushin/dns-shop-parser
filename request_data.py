@@ -1,3 +1,5 @@
+url = "https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/"
+
 cookies = {
     '_csrf': '3b5b377a269c13de8db6fe053835116dee3907d403125c6266ef0f533a5e90e3a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22rEF2yn1xE8Q6OtSRLd9mOC06hL6z7X05%22%3B%7D',
 }

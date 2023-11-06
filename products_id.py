@@ -1,30 +1,27 @@
 from playwright.sync_api import sync_playwright
-products_id = []
 
-url = "https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/"
 
-def get_products_id(url):
+def get_product_ids_from_url(url: str) -> list:
+    product_ids = []
     with sync_playwright() as playwright:
         browser = playwright.firefox.launch(headless=False)
-        page = browser.new_page()
-        page.goto(url + "?p=1")
-        page.wait_for_selector('.catalog-product.ui-button-widget')
-        last_pos = page.query_selector('.pagination-widget__page-link.pagination-widget__page-link_last').get_attribute("href").split("p=")[-1]
-        elements = page.query_selector_all('.catalog-product.ui-button-widget')
-        elements = list(map(lambda x: x.get_attribute('data-product'), elements))
-        products_id.extend(elements)
+        first_page = browser.new_page()
+        first_page.goto(url + "?p=1")
+        first_page.wait_for_selector('.catalog-product.ui-button-widget')
+        total_pages = int(
+            first_page.query_selector('.pagination-widget__page-link.pagination-widget__page-link_last').get_attribute(
+                "href").split("p=")[-1])
+        first_page.close()
 
-        if int(last_pos) > 1:
-            for i in range(2, int(last_pos)+1):
-                page = browser.new_page()
-                page.goto(url + "?p=" + str(i))
-                elements = page.query_selector_all('.catalog-product.ui-button-widget')
-                elements = list(map(lambda x: x.get_attribute('data-product'), elements))
-                products_id.extend(elements)
+        for page_number in range(1, total_pages + 1):
+            current_page = browser.new_page()
+            current_page.goto(url + "?p=" + str(page_number))
+            current_page.wait_for_selector('.catalog-product.ui-button-widget')
+            product_elements = current_page.query_selector_all('.catalog-product.ui-button-widget')
+            product_ids_on_page = list(map(lambda x: x.get_attribute('data-product'), product_elements))
+            product_ids.extend(product_ids_on_page)
+            current_page.close()
 
         browser.close()
 
-    return products_id
-
-data = get_products_id(url)
-
+    return product_ids
