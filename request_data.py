@@ -1,24 +1,35 @@
-url = "https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/"
+import logging
 
-cookies = {
-    '_csrf': '3b5b377a269c13de8db6fe053835116dee3907d403125c6266ef0f533a5e90e3a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22rEF2yn1xE8Q6OtSRLd9mOC06hL6z7X05%22%3B%7D',
-}
+from playwright.async_api import async_playwright
 
-headers = {
-    'Accept': '*/*',
-    'Accept-Language': 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7',
-    'Cache-Control': 'max-age=0',
-    'Connection': 'keep-alive',
-    'DNT': '1',
-    'Origin': 'https://www.dns-shop.ru',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-origin',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.76',
-    'X-CSRF-Token': 'DlyfQd_oGMWfwBi3ou7ldWsZ3HpVmytn06Xs2YxB9DR8GdlzpoYpvdr4SYHtmrYnJ33lFxrYG1G76dqjuxnEAQ==',
-    'X-Requested-With': 'XMLHttpRequest',
-    'content-type': 'application/x-www-form-urlencoded',
-    'sec-ch-ua': '"Chromium";v="118", "Microsoft Edge";v="118", "Not=A?Brand";v="99"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-}
+URL = "https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/"
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler("debug.log"),
+                              logging.StreamHandler()])
+
+
+async def get_request_data():
+    cookies = {}
+    headers = {}
+
+    def get_response_headers(response):
+        nonlocal headers
+        headers = response.headers
+        logging.info(f"Получены headers: {headers}")
+
+    async with async_playwright() as playwright:
+        browser = await playwright.firefox.launch(headless=False)
+        context = await browser.new_context()
+        page = await context.new_page()
+        page.on("response", get_response_headers)
+        await page.goto(URL)
+        await page.wait_for_selector('.products-page__list')
+        cookies_list = await context.cookies()
+        await browser.close()
+
+    for c in cookies_list:
+        cookies.update({c["name"]: c["value"]})
+    logging.info(f"Получены cookies: {cookies}")
+    return cookies, headers

@@ -1,27 +1,34 @@
-from playwright.sync_api import sync_playwright
+import asyncio
+
+import aiohttp
+from bs4 import BeautifulSoup
 
 
-def get_product_ids_from_url(url: str) -> list:
-    product_ids = []
-    with sync_playwright() as playwright:
-        browser = playwright.firefox.launch(headless=False)
-        first_page = browser.new_page()
-        first_page.goto(url + "?p=1")
-        first_page.wait_for_selector('.catalog-product.ui-button-widget')
+async def get_total_pages(session):
+    async with session.get('https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/?p=1') as response:
+        soup = BeautifulSoup(await response.text(), 'html.parser')
         total_pages = int(
-            first_page.query_selector('.pagination-widget__page-link.pagination-widget__page-link_last').get_attribute(
-                "href").split("p=")[-1])
-        first_page.close()
+            soup.find(class_='pagination-widget__page-link pagination-widget__page-link_last').get("href").split("p=")[
+                -1])
+    return total_pages
 
-        for page_number in range(1, total_pages + 1):
-            current_page = browser.new_page()
-            current_page.goto(url + "?p=" + str(page_number))
-            current_page.wait_for_selector('.catalog-product.ui-button-widget')
-            product_elements = current_page.query_selector_all('.catalog-product.ui-button-widget')
-            product_ids_on_page = list(map(lambda x: x.get_attribute('data-product'), product_elements))
-            product_ids.extend(product_ids_on_page)
-            current_page.close()
 
-        browser.close()
+async def get_products_id(cookies: str, headers: str) -> list:
+    async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
+        semaphore = asyncio.Semaphore(10)
+        total_pages = await get_total_pages(session)
+        pages = list(range(1, total_pages + 1))
+        tasks = [fetch(session, page, semaphore) for page in pages]
+        products_id_list = await asyncio.gather(*tasks)
+    return products_id_list
 
-    return product_ids
+
+async def fetch(session, page, semaphore):
+    async with semaphore:
+        async with session.get(f'https://www.dns-shop.ru/catalog/17a89aab16404e77/videokarty/?p={page}/') as response:
+            response_text = await response.text()
+            soup = BeautifulSoup(response_text, 'html.parser')
+            elements = soup.find_all(class_='catalog-product ui-button-widget')
+            elements = list(map(lambda x: x.get("data-product"), elements))
+
+    return elements
